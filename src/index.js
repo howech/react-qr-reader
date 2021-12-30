@@ -40,7 +40,7 @@ module.exports = class Reader extends Component {
     facingMode: 'environment',
     showViewFinder: true,
     constraints: null,
-    showFeedback: true,
+    showFeedback: false,
   };
 
   els = {};
@@ -438,8 +438,7 @@ module.exports = class Reader extends Component {
     const qrLocatorStyle = {
       top: top,
       left: left,
-      boxSizing: 'border',
-      border: '10px solid rgba(0, 255, 0, 0.5)',
+      outline: '10px solid rgba(0, 255, 0, 0.5)',
       position: 'absolute',
       width: width,
       height: height,
