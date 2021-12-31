@@ -48,8 +48,8 @@ module.exports = class Reader extends Component {
   // This data gets dynamically updated - its used to transform
   // coordinates in the video image into coordinates in css %-space
   transformData = {
-    dx: 0,
-    dy: 0,
+    x_offset: 0,
+    y_offset: 0,
     x_scale: 400,
     y_scale: 400,
   };
@@ -59,12 +59,12 @@ module.exports = class Reader extends Component {
   // place a div approximately around the detected qr code in
   // the image.
   transformRect(top, left, bottom, right) {
-    const {dx,dy,x_scale,y_scale} = this.transformData
+    const {x_offset, y_offset, x_scale, y_scale} = this.transformData
 
-    const tx_top = Math.floor(100*(top-dy)/y_scale)
-    const tx_bottom = Math.floor(100*(bottom-dy)/y_scale)
-    const tx_left = Math.floor(100*(left-dx)/x_scale)
-    const tx_right = Math.floor(100*(right-dx)/x_scale)
+    const tx_top = Math.floor(100*(top-y_offset)/y_scale)
+    const tx_bottom = Math.floor(100*(bottom-y_offset)/y_scale)
+    const tx_left = Math.floor(100*(left-x_offset)/x_scale)
+    const tx_right = Math.floor(100*(right-x_offset)/x_scale)
 
     // we have to work out left/right and top/bottom after the transform
     // because there is no guarantee that x_scale/y_scale are positive.
@@ -90,6 +90,10 @@ module.exports = class Reader extends Component {
     this.state = {
       mirrorVideo: false,
       qrFound: false,
+      top: 0,
+      left: 0,
+      width: 0,
+      height: 0,
     }
 
     // Bind function to the class
@@ -295,13 +299,13 @@ module.exports = class Reader extends Component {
       canvas.width = resolution
       canvas.height = resolution
 
-      this.transformData.dy = 0
+      this.transformData.y_offset = 0
       this.transformData.y_scale = resolution
-      this.transformData.dx = 0
+      this.transformData.x_offset = 0
       this.transformData.x_scale = resolution
 
       if(mirrorVideo) {
-        this.transformData.dx = resolution + this.transformData.dx
+        this.transformData.x_offset = resolution + this.transformData.x_offset
         this.transformData.x_scale = -this.transformData.x_scale
       }
     }
@@ -324,7 +328,7 @@ module.exports = class Reader extends Component {
     }
   }
   handleWorkerMessage(e) {
-    const { onScan, legacyMode, delay, showFeedback } = this.props
+    const { onScan, legacyMode, delay, } = this.props
     const { preview } = this.els
 
     const decoded = e.data
@@ -341,7 +345,7 @@ module.exports = class Reader extends Component {
       const {top, left, width, height} = this.transformRect(org_top, org_left, org_bottom, org_right)
 
       this.setState({
-        qrFound: showFeedback,
+        qrFound: true,
         top: top,
         left: left,
         width: width,
@@ -356,7 +360,7 @@ module.exports = class Reader extends Component {
         height: 0,
       })
     }
-    onScan(decoded && decoded.data || null)
+    onScan(decoded && (decoded.data || null))
 
     if (!legacyMode && typeof delay == 'number' && this.worker) {
       this.timeout = setTimeout(this.check, delay)
@@ -398,7 +402,8 @@ module.exports = class Reader extends Component {
       onImageLoad,
       legacyMode,
       showViewFinder,
-      facingMode
+      facingMode,
+      showFeedback,
     } = this.props
 
     const {
@@ -456,7 +461,7 @@ module.exports = class Reader extends Component {
       width: width,
       height: height,
       zIndex: 2,
-      visibility: qrFound ? 'visible' : 'hidden'
+      visibility: (showFeedback && qrFound) ? 'visible' : 'hidden'
     }
     return (
       <section className={className} style={style}>
