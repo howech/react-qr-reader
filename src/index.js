@@ -44,24 +44,38 @@ module.exports = class Reader extends Component {
   };
 
   els = {};
+
+  // This data gets dynamically updated - its used to transform
+  // coordinates in the video image into coordinates in css %-space
   transformData = {
     dx: 0,
     dy: 0,
-    xscale: 400,
-    yscale: 400,
+    x_scale: 400,
+    y_scale: 400,
   };
 
+  // transforms a rectangle bounded by top, left, bottom, right
+  // into %-based coordinates (top, left, width, height) to
+  // place a div approximately around the detected qr code in
+  // the image.
   transformRect(top, left, bottom, right) {
-    const tx_top = Math.floor(100*(top-this.transformData.dy)/this.transformData.yscale)
-    const tx_bottom = Math.floor(100*(bottom-this.transformData.dy)/this.transformData.yscale)
+    const {dx,dy,x_scale,y_scale} = this.transformData
 
-    const tx_left = Math.floor(100*(left-this.transformData.dx)/this.transformData.xscale)
-    const tx_right = Math.floor(100*(right-this.transformData.dx)/this.transformData.xscale)
+    const tx_top = Math.floor(100*(top-dy)/y_scale)
+    const tx_bottom = Math.floor(100*(bottom-dy)/y_scale)
+    const tx_left = Math.floor(100*(left-dx)/x_scale)
+    const tx_right = Math.floor(100*(right-dx)/x_scale)
 
+    // we have to work out left/right and top/bottom after the transform
+    // because there is no guarantee that x_scale/y_scale are positive.
     const new_left = Math.min(tx_left, tx_right)
     const new_width = Math.abs(tx_left - tx_right)
     const new_top = Math.min(tx_top, tx_bottom)
     const new_height = Math.abs(tx_top - tx_bottom)
+
+    // results are strings in % units suitable for placing
+    // in the inline css for a div to place it on top of the
+    // video, enclosing the detected qr code.
     return {
       top: new_top + "%",
       left: new_left + "%",
@@ -281,18 +295,14 @@ module.exports = class Reader extends Component {
       canvas.width = resolution
       canvas.height = resolution
 
-      const vidWidth = Math.floor(preview.videoWidth)
-      const vidHeight = Math.floor(preview.videoHeight)
-
-      const box = Math.min(vidWidth, vidHeight)
       this.transformData.dy = 0
-      this.transformData.yscale = resolution
+      this.transformData.y_scale = resolution
       this.transformData.dx = 0
-      this.transformData.xscale = resolution
+      this.transformData.x_scale = resolution
 
       if(mirrorVideo) {
         this.transformData.dx = resolution + this.transformData.dx
-        this.transformData.xscale = -this.transformData.xscale
+        this.transformData.x_scale = -this.transformData.x_scale
       }
     }
 
@@ -320,11 +330,14 @@ module.exports = class Reader extends Component {
     const decoded = e.data
     if(decoded) {
 
+      // Calculate a bounding rectangle around the detected qr code
       const org_left = Math.min(decoded.location.topLeftCorner.x, decoded.location.bottomLeftCorner.x)
       const org_right = Math.max(decoded.location.topRightCorner.x, decoded.location.bottomRightCorner.x)
       const org_top = Math.min(decoded.location.topLeftCorner.y, decoded.location.topRightCorner.y)
       const org_bottom = Math.max(decoded.location.bottomLeftCorner.y, decoded.location.bottomRightCorner.y)
 
+      // Transform the video-based coordinates into %-based units suitable
+      // for css on a div
       const {top, left, width, height} = this.transformRect(org_top, org_left, org_bottom, org_right)
 
       this.setState({
